@@ -1,0 +1,9 @@
+a {
+    text-decoration: none;
+    color: white;
+    font-size: 20px;
+}
+
+a:hover {
+    color: #524f4f
+}
