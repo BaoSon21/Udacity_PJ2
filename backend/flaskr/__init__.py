@@ -143,18 +143,20 @@ def create_app(test_config=None):
     @app.route("/questions/search", methods=["POST"])
     def searchQuestion():
         searchTerm = request.json["searchTerm"]
+        if searchTerm:
         
-        listQuestions = Question.query.filter(Question.question.like('%' + searchTerm + '%')).all()
-        resultObject = convertTableToList(listQuestions)
-        category = Category.query.all()
-        listCategoryObj = convertTableToList(category)
+            listQuestions = Question.query.filter(Question.question.like('%' + searchTerm + '%')).all()
+            resultObject = convertTableToList(listQuestions)
+            category = Category.query.all()
+            listCategoryObj = convertTableToList(category)
 
-        return jsonify({
-            "success": True,
-            "questions": resultObject,
-            "totalQuestions": len(resultObject),
-            "currentCategory": listCategoryObj
-        })
+            return jsonify({
+                "success": True,
+                "questions": resultObject,
+                "totalQuestions": len(resultObject),
+                "currentCategory": listCategoryObj
+            })
+        abort(404)
     """
     @TODO:
     Create a GET endpoint to get questions based on category.
@@ -190,50 +192,41 @@ def create_app(test_config=None):
     """
     @app.route('/quizzes', methods=['POST'])
     def getQuestionOfQuizzes():
-        data = request.json
-        previous_questions = data["previous_questions"]
-        quiz_category = data["quiz_category"]
+        try:
 
-        if(not quiz_category or not (quiz_category["id"] >= 0)):
-            abort(400)
-            return
-        
-        questions = []
-        if(quiz_category["id"] == 0):
-            questions = Question.query.all()
-        else:
-            questions = Question.query.filter_by(category=quiz_category["id"]).all()
-        
-        listQuestionObj = convertTableToList(questions)
-       
-        if(len(listQuestionObj) > 1):
-            randomQuestion = None
-            try:
-                while(not randomQuestion or randomQuestion["id"] in previous_questions):
-                    randomQuestion = random.choice(listQuestionObj)
-            except:
-                abort(500)
-                return
-            
+            data = request.get_json()
+            category = data.get('quiz_category')
+            previous_questions = data.get('previous_questions')
+            if not ('quiz_category' in data and 'previous_questions' in data):
+                abort(404)
+
+            if category['type'] == 'click':
+                available_questions = Question.query.filter(
+                    Question.id.notin_(previous_questions)).all()
+            else:
+                available_questions = Question.query.filter_by(
+                    category=category['id']).filter(
+                    Question.id.notin_(
+                        previous_questions)).all()
+
+            new_question = available_questions[random.randrange(
+                0, len(available_questions))].format() if \
+                len(available_questions) > 0 else None
+
             return jsonify({
-                "success": True,
-                "question": randomQuestion
+                'success': True,
+                'question': new_question
             })
-        elif (len(listQuestionObj) == 1):
-            return jsonify({
-                "success": True,
-                "question": listQuestionObj[0]
-            })
-        else:
-            return jsonify({
-                "success": True,
-                "question": {}
-            })
+        except BaseException:
+            abort(404)
+
              
 
     @app.route('/categories', methods=['GET'])
     def getAllCategories():
         listCategory = Category.query.all()
+        if len(listCategory ) == 0:
+            abort(404)
         listObj = convertTableToList(listCategory)
 
         return jsonify({

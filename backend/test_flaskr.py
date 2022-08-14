@@ -101,6 +101,16 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
 
+    def test_create_question_500(self):
+        dummy_question_data = {
+            'question': 'year?',
+            'answer': '2022',
+            'difficulty': 1,
+            'category': -1
+        }
+        res = self.client().post('/questions', json=dummy_question_data)
+        self.assertEqual(res.status_code, 500)
+
     def test_search_question(self):
         res = self.client().post('/questions/search', json=self.payloadSearch)
         data = json.loads(res.data)
@@ -109,6 +119,12 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["success"], True)
         self.assertTrue(data["totalQuestions"])
         self.assertTrue(len(data["questions"]))
+    
+    def test_search_questions_404(self):
+        bogus_search = {'searchTerm': ''}
+        res = self.client().post('/questions/search', json=bogus_search)
+        self.assertEqual(res.status_code, 404)
+
 
     def test_get_question_by_category(self):
         res = self.client().get('/categories/1/questions')
@@ -132,6 +148,10 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["success"], True)
         self.assertTrue(len(data["categories"]))
 
+    def test_get_category_questions_404(self):
+        res = self.client().get('/categories/100000')
+        self.assertEqual(res.status_code, 404)
+
 
     def test_get_quiz(self):
         res = self.client().post('/quizzes', json=self.payloadGetQuiz)
@@ -140,6 +160,18 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
         self.assertTrue(data["question"])
+    
+    def test_play_quiz_404(self):
+        dummy_data = {
+            'previous_questions': [],
+            'quiz_category1': {'type': 'Entertainment',
+                              'id': 10}
+        }
+
+        # Attempting to start new quiz round
+        res = self.client().post('/quizzes', json=dummy_data)
+        #data = json.loads(res.data)
+        self.assertEqual(res.status_code, 404)
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
